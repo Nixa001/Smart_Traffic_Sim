@@ -357,7 +357,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8d31e63ea85be51c423e52ba8f2e68a3efd53eed30203ee029dd09947333693e"
 dependencies = [
  "rand_chacha",
- "rand_core",
+ "rand_core 0.9.0-alpha.1",
  "zerocopy 0.8.0-alpha.6",
 ]
 
@@ -368,8 +368,14 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "78674ef918c19451dbd250f8201f8619b494f64c9aa6f3adb28fd8a0f1f6da46"
 dependencies = [
  "ppv-lite86",
- "rand_core",
+ "rand_core 0.9.0-alpha.1",
 ]
+
+[[package]]
+name = "rand_core"
+version = "0.6.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ec0be4795e2f6a28069bec0b5ff3e2ac9bafc99e6a9a7dc3547996c5c816922c"
 
 [[package]]
 name = "rand_core"
@@ -379,6 +385,15 @@ checksum = "cc89dffba8377c5ec847d12bb41492bda235dba31a25e8b695cd0fe6589eb8c9"
 dependencies = [
  "getrandom",
  "zerocopy 0.8.0-alpha.6",
+]
+
+[[package]]
+name = "rand_pcg"
+version = "0.3.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "59cad018caf63deb318e5a4586d99a24424a364f40f1e5778c29aca23f4fc73e"
+dependencies = [
+ "rand_core 0.6.4",
 ]
 
 [[package]]
@@ -403,6 +418,7 @@ dependencies = [
  "chrono",
  "macroquad",
  "rand",
+ "rand_pcg",
 ]
 
 [[package]]
