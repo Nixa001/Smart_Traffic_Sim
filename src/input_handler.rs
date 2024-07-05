@@ -1,8 +1,8 @@
-use crate::config::Route;
-use crate::config::Direction;
+use crate::config::{Direction, Route, VITESSE_MAX, VITESSE_MIN, VITESSE_NORMAL};
+
 use crate::vehicule::Vehicule;
-use macroquad::prelude::*;
 use ::rand::Rng;
+use macroquad::prelude::*;
 use std::time::{Duration, Instant};
 
 pub struct InputHandler {
@@ -73,7 +73,7 @@ impl InputHandler {
             vehicules.push(Vehicule::new(
                 *next_id,
                 vec2(random_x, 990.0),
-                0.5,
+                VITESSE_NORMAL,
                 Direction::Up,
                 random_route,
             ));
@@ -90,7 +90,7 @@ impl InputHandler {
             vehicules.push(Vehicule::new(
                 *next_id,
                 vec2(random_x - 140.0, 0.0),
-                0.5,
+                VITESSE_NORMAL,
                 Direction::Down,
                 random_route,
             ));
@@ -107,7 +107,7 @@ impl InputHandler {
             vehicules.push(Vehicule::new(
                 *next_id,
                 vec2(950.0, random_y - 140.0),
-                0.5,
+                VITESSE_NORMAL,
                 Direction::Left,
                 random_route,
             ));
@@ -124,7 +124,7 @@ impl InputHandler {
             vehicules.push(Vehicule::new(
                 *next_id,
                 vec2(0.0, random_y),
-                0.5,
+                VITESSE_NORMAL,
                 Direction::Right,
                 random_route,
             ));
@@ -135,7 +135,7 @@ impl InputHandler {
             vehicules.push(Vehicule::new(
                 *next_id,
                 coordonne,
-                0.5,
+                VITESSE_NORMAL,
                 direction,
                 random_route,
             ));

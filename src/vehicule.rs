@@ -1,4 +1,4 @@
-use crate::config::{Direction, Route};
+use crate::config::{Direction, Route, VITESSE_MAX, VITESSE_MIN, VITESSE_NORMAL};
 use macroquad::prelude::*;
 use std::time::Instant;
 
@@ -34,6 +34,21 @@ impl Vehicule {
             start_time: Instant::now(),
         }
     }
+    pub fn detect_collision(&self, other: &Vehicule, sensor_distance: f32) -> bool {
+        let (sensor_x, sensor_y) = match self.direction {
+            Direction::Up => (self.coordonne.x, self.coordonne.y - sensor_distance),
+            Direction::Down => (self.coordonne.x, self.coordonne.y + sensor_distance),
+            Direction::Left => (self.coordonne.x - sensor_distance, self.coordonne.y),
+            Direction::Right => (self.coordonne.x + sensor_distance, self.coordonne.y),
+        };
+
+        let dist_x = (sensor_x - other.coordonne.x).abs();
+        let dist_y = (sensor_y - other.coordonne.y).abs();
+
+        let collision_threshold = 50.0;
+
+        dist_x < collision_threshold && dist_y < collision_threshold
+    }
 
     pub fn update(&mut self, delta_time: f32) {
         self.time += delta_time;
@@ -44,6 +59,11 @@ impl Vehicule {
                 self.coordonne.y -= self.vitesse;
                 if self.coordonne.y <= 610.0 && self.route == Route::SE {
                     self.set_direction(Direction::Right);
+                    self.vitesse = VITESSE_MAX;
+                }
+                
+                if self.coordonne.y <= 515.0 - 140.0 {
+                    self.vitesse = VITESSE_MAX;
                 }
                 if self.coordonne.y <= 610.0 - 140.0 && self.route == Route::SW {
                     self.set_direction(Direction::Left);
@@ -54,14 +74,23 @@ impl Vehicule {
                 if self.coordonne.y >= 515.0 && self.route == Route::NE {
                     self.set_direction(Direction::Right);
                 }
+                
+                if self.coordonne.y >= 610.0 - 140.0 {
+                    self.vitesse = VITESSE_MAX;
+                }
                 if self.coordonne.y >= 515.0 - 140.0 && self.route == Route::NW {
                     self.set_direction(Direction::Left);
+                    self.vitesse = VITESSE_MAX;
                 }
             }
             Direction::Left => {
                 self.coordonne.x -= self.vitesse;
                 if self.coordonne.x <= 592.0 && self.route == Route::EN {
                     self.set_direction(Direction::Up);
+                    self.vitesse = VITESSE_MAX;
+                }
+                if self.coordonne.x <= 500.0 - 140.0 {
+                    self.vitesse = VITESSE_MAX;
                 }
                 if self.coordonne.x <= 592.0 - 140.0 && self.route == Route::ES {
                     self.set_direction(Direction::Down);
@@ -72,8 +101,13 @@ impl Vehicule {
                 if self.coordonne.x >= 500.0 && self.route == Route::WN {
                     self.set_direction(Direction::Up);
                 }
+
+                if self.coordonne.x >= 592.0{
+                    self.vitesse = VITESSE_MAX;
+                }
                 if self.coordonne.x >= 500.0 - 140.0 && self.route == Route::WS {
                     self.set_direction(Direction::Down);
+                    self.vitesse = VITESSE_MAX;
                 }
             }
         }
