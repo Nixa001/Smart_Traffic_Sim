@@ -1,20 +1,14 @@
+mod config;
+mod input_handler;
+mod vehicule;
+
+// use crate::config::Direction;
+use crate::config::Route;
+use crate::input_handler::InputHandler;
+use crate::vehicule::Vehicule;
+use ::rand::thread_rng;
 use macroquad::prelude::*;
-use std::default::Default;
-
-#[derive(PartialEq)]
-pub enum Direction {
-    Up,
-    Down,
-    Left,
-    Right,
-}
-
-pub struct Vehicule {
-    pub id: i32,
-    pub coordonne: Vec2,
-    pub vitesse: f32,
-    pub direction: Direction,
-}
+use std::time::Duration;
 
 fn window_conf() -> Conf {
     Conf {
@@ -25,55 +19,55 @@ fn window_conf() -> Conf {
     }
 }
 
-impl Vehicule {
-    fn new(id: i32, coordonne: Vec2, vitesse: f32, direction: Direction) -> Self {
-        Vehicule {
-            id,
-            coordonne,
-            vitesse,
-            direction,
-        }
-    }
-
-    fn update(&mut self) {
-        match self.direction {
-            Direction::Up => self.coordonne.y -= self.vitesse,
-            Direction::Down => self.coordonne.y += self.vitesse,
-            Direction::Left => self.coordonne.x -= self.vitesse,
-            Direction::Right => self.coordonne.x += self.vitesse,
-        }
-    }
-}
-
 #[macroquad::main(window_conf)]
 async fn main() {
     let img: Texture2D = load_texture("./assets/road.png").await.unwrap();
     let car_1: Texture2D = load_texture("./assets/car_blue.png").await.unwrap();
     let car_2: Texture2D = load_texture("./assets/car_green.png").await.unwrap();
     let car_3: Texture2D = load_texture("./assets/car_white.png").await.unwrap();
+    let mut rng = thread_rng();
 
-    let mut car1 = Vehicule::new(1, vec2(0.0, 510.0), 0.2, Direction::Right);
-    let mut car2 = Vehicule::new(1, vec2(0.0, 560.0), 0.2, Direction::Right);
-    let mut car3 = Vehicule::new(1, vec2(0.0, 610.0), 0.2, Direction::Right);
-    let mut cara = Vehicule::new(1, vec2(1000.0, 370.0), 0.2, Direction::Left);
-    let mut carb = Vehicule::new(1, vec2(1000.0, 420.0), 0.2, Direction::Left);
-    let mut carc = Vehicule::new(1, vec2(1000.0, 470.0), 0.2, Direction::Left);
+    let mut vehicules: Vec<Vehicule> = Vec::new();
+    let mut next_id = 1;
+
+    let mut input_handler = InputHandler::new(Duration::from_millis(700));
 
     loop {
+        input_handler.handle_input(&mut vehicules, &mut next_id, &mut rng);
         draw_texture(&img, 0.0, 0.0, WHITE);
 
-        car1.update();
-        car2.update();
-        car3.update();
-        cara.update();
-        carb.update();
-        carc.update();
-        draw_texture(&car_1, car1.coordonne.x, car1.coordonne.y, WHITE);
-        draw_texture(&car_2, car2.coordonne.x, car2.coordonne.y, WHITE);
-        draw_texture(&car_3, car3.coordonne.x, car3.coordonne.y, WHITE);
-        draw_texture(&car_1, cara.coordonne.x, cara.coordonne.y, WHITE);
-        draw_texture(&car_2, carb.coordonne.x, carb.coordonne.y, WHITE);
-        draw_texture(&car_3, carc.coordonne.x, carc.coordonne.y, WHITE);
+        let delta_time = get_frame_time();
+        for vehicule in &mut vehicules {
+            vehicule.update(delta_time);
+            let draw_params = DrawTextureParams {
+                rotation: vehicule.rotation.to_radians(),
+                ..Default::default()
+            };
+
+            let car = if vehicule.route == Route::SE
+                || vehicule.route == Route::EN
+                || vehicule.route == Route::NW
+                || vehicule.route == Route::WS
+            {
+                car_1.clone()
+            } else if vehicule.route == Route::NS
+                || vehicule.route == Route::SN
+                || vehicule.route == Route::WE
+                || vehicule.route == Route::EW
+            {
+                car_2.clone()
+            } else {
+                car_3.clone()
+            };
+
+            draw_texture_ex(
+                &car,
+                vehicule.coordonne.x,
+                vehicule.coordonne.y,
+                WHITE,
+                draw_params,
+            );
+        }
 
         next_frame().await;
     }
