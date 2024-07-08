@@ -1,35 +1,46 @@
-use crate::config::{Direction, Route, VITESSE_MAX, VITESSE_MIN, VITESSE_NORMAL, VITESSE_NUL};
-use macroquad::color::{Color, BLACK, WHITE};
 use macroquad::prelude::*;
-use std::time::Instant;
+use crate::constants::*;
+use crate::route::Route;
 
-fn lerp_color(color1: Color, color2: Color, t: f32) -> Color {
-    Color {
-        r: color1.r + (color2.r - color1.r) * t,
-        g: color1.g + (color2.g - color1.g) * t,
-        b: color1.b + (color2.b - color1.b) * t,
-        a: color1.a + (color2.a - color1.a) * t,
-    }
+#[derive(Debug, PartialEq, Clone, Copy)]
+pub enum Direction {
+    Left,
+    Right,
+    Down,
+    Up,
 }
-#[derive(Clone)]
+
+#[derive(PartialEq)]
+pub enum Turning {
+    Left,
+    Right,
+    None,
+}
+
+#[derive(Debug, PartialEq, Clone)]
 pub struct Vehicule {
-    pub id: i32,
+    pub id: u32,
+    pub color: Texture2D,
     pub coordonne: Vec2,
-    pub vitesse: f32,
-    pub direction: Direction,
+    pub vitesse: (f32, f32),
     pub rotation: f32,
+    pub rectangle: (f32, f32),
+    pub direction: Direction,
     pub route: Route,
-    pub time: f32,
-    pub distance: f32,
-    pub start_time: Instant,
-    pub width: f32,
-    pub height: f32,
-    pub sensor_length_large: f32,
-    pub sensor_length_small: f32,
+    pub turned: bool,
 }
 
 impl Vehicule {
-    pub fn new(id: i32, coordonne: Vec2, vitesse: f32, direction: Direction, route: Route) -> Self {
+    pub fn new(
+        coordonne: Vec2,
+        rectangle: (f32, f32),
+        color: Texture2D,
+        vitesse: (f32, f32),
+        id: u32,
+        direction: Direction,
+        route: Route,
+        turned: bool,
+    ) -> Vehicule {
         let rotation = match direction {
             Direction::Up => -90.0,
             Direction::Down => 90.0,
@@ -37,272 +48,132 @@ impl Vehicule {
             Direction::Right => 0.0,
         };
         Vehicule {
-            id,
+            color,
+            rectangle,
             coordonne,
             vitesse,
-            direction,
             rotation,
+            id,
+            direction,
             route,
-            time: 0.0,
-            distance: 0.0,
-            start_time: Instant::now(),
-            width: 50.0,
-            height: 23.0,
-            sensor_length_large: 100.0,
-            sensor_length_small: 50.0,
+            turned,
         }
     }
 
-    pub fn detect_collision_large(&self, other: &Vehicule) -> bool {
-        let self_front = self.get_front_point_large();
-        let other_front = other.coordonne;
-        // other.draw();
-
-        let distance = self_front.distance(other_front);
-
-        ((self_front[0] - other_front[0]).abs() <= 10.0
-            || (self_front[1] - other_front[1]).abs() <= 10.0)
-            && distance < self.sensor_length_large
-    }
-
-    pub fn detect_collision_small(&self, other: &Vehicule) -> bool {
-        let self_front = self.get_front_point_small();
-        let other_front = other.coordonne;
-        // self.draw();
-
-        let distance = self_front.distance(other_front);
-
-        // ((self_front[0] - other_front[0]).abs() <= 10.0 ||( self_front[1] - other_front[1]).abs() <= 10.0)
-        // &&
-        distance < self.sensor_length_small
-    }
-    pub fn adjust_speed_based_on_sensors(&mut self, other: &mut Vehicule) {
-        // self.draw();
-        if self.detect_collision_large(other) {
-            self.vitesse = VITESSE_MIN;
-            other.vitesse = VITESSE_MAX;
-        } else if self.detect_collision_small(other) {
-            self.vitesse = VITESSE_NUL;
-            other.vitesse = VITESSE_MAX;
+    pub fn drive(&mut self) {
+        if self.on_turn_point() && !self.turned {
+            self.turn();
         }
-        //  else {
-        // }
-    }
-
-    fn get_front_point_large(&self) -> Vec2 {
-        match self.direction {
-            Direction::Up => Vec2::new(
-                self.coordonne.x + self.width / 2.0,
-                self.coordonne.y - self.sensor_length_large,
-            ),
-            Direction::Down => Vec2::new(
-                self.coordonne.x + self.width / 2.0,
-                self.coordonne.y + self.height + self.sensor_length_large,
-            ),
-            Direction::Left => Vec2::new(
-                self.coordonne.x - self.sensor_length_large,
-                self.coordonne.y + self.height / 2.0,
-            ),
-            Direction::Right => Vec2::new(
-                self.coordonne.x + self.width + self.sensor_length_large,
-                self.coordonne.y + self.height / 2.0,
-            ),
-        }
-    }
-
-    fn get_front_point_small(&self) -> Vec2 {
-        match self.direction {
-            Direction::Up => Vec2::new(
-                self.coordonne.x + self.width / 2.0,
-                self.coordonne.y - self.sensor_length_small,
-            ),
-            Direction::Down => Vec2::new(
-                self.coordonne.x + self.width / 2.0,
-                self.coordonne.y + self.height + self.sensor_length_small,
-            ),
-            Direction::Left => Vec2::new(
-                self.coordonne.x - self.sensor_length_small,
-                self.coordonne.y + self.height / 2.0,
-            ),
-            Direction::Right => Vec2::new(
-                self.coordonne.x + self.width + self.sensor_length_small,
-                self.coordonne.y + self.height / 2.0,
-            ),
-        }
-    }
-
-    pub fn update(&mut self, delta_time: f32) {
-        self.time += delta_time;
-        self.distance += self.vitesse * delta_time;
-
-        match self.direction {
-            Direction::Up => {
-                self.coordonne.y -= self.vitesse;
-                if self.coordonne.y <= 610.0 && self.route == Route::SE {
-                    self.set_direction(Direction::Right);
-                    self.vitesse = VITESSE_MAX;
-                }
-
-                if self.coordonne.y <= 515.0 - 140.0 {
-                    self.vitesse = VITESSE_MAX;
-                }
-                if self.coordonne.y <= 610.0 - 140.0 && self.route == Route::SW {
-                    self.set_direction(Direction::Left);
-                }
-            }
-            Direction::Down => {
-                self.coordonne.y += self.vitesse;
-                if self.coordonne.y >= 515.0 && self.route == Route::NE {
-                    self.set_direction(Direction::Right);
-                }
-
-                if self.coordonne.y >= 610.0 - 140.0 {
-                    self.vitesse = VITESSE_MAX;
-                }
-                if self.coordonne.y >= 515.0 - 140.0 && self.route == Route::NW {
-                    self.set_direction(Direction::Left);
-                    self.vitesse = VITESSE_MAX;
-                }
-            }
-            Direction::Left => {
-                self.coordonne.x -= self.vitesse;
-                if self.coordonne.x <= 592.0 && self.route == Route::EN {
-                    self.set_direction(Direction::Up);
-                    self.vitesse = VITESSE_MAX;
-                }
-                if self.coordonne.x <= 500.0 - 140.0 {
-                    self.vitesse = VITESSE_MAX;
-                }
-                if self.coordonne.x <= 592.0 - 140.0 && self.route == Route::ES {
-                    self.set_direction(Direction::Down);
-                }
-            }
-            Direction::Right => {
-                self.coordonne.x += self.vitesse;
-                if self.coordonne.x >= 500.0 && self.route == Route::WN {
-                    self.set_direction(Direction::Up);
-                }
-
-                if self.coordonne.x >= 592.0 {
-                    self.vitesse = VITESSE_MAX;
-                }
-                if self.coordonne.x >= 500.0 - 140.0 && self.route == Route::WS {
-                    self.set_direction(Direction::Down);
-                    self.vitesse = VITESSE_MAX;
-                }
-            }
-        }
-    }
-    pub fn set_direction(&mut self, direction: Direction) {
-        self.direction = direction;
-        self.rotation = match direction {
-            Direction::Up => -90.0,
-            Direction::Down => 90.0,
-            Direction::Left => 180.0,
-            Direction::Right => 0.0,
-        };
-    }
-
-    pub fn draw(&self) {
-        draw_rectangle(
-            self.coordonne.x,
-            self.coordonne.y,
-            self.width,
-            self.height,
-            BLACK,
+        self.coordonne = vec2(
+            self.coordonne.x + self.vitesse.0,
+            self.coordonne.y + self.vitesse.1,
         );
     }
 
-    pub fn draw_sensors(&self) {
-        let sensor_color_large = WHITE;
-        let sensor_color_small = BLACK;
+    fn on_turn_point(&self) -> bool {
+        return match self.route {
+            Route::NW => self.coordonne.y >= 340.0,
+            Route::SE => self.coordonne.y <= 625.0,
+            Route::WS => self.coordonne.x > 375.0,
+            Route::EN => self.coordonne.x < 625.0,
 
-        // Draw the larger sensor
-        match self.direction {
-            Direction::Up => {
-                draw_line(
-                    self.coordonne.x + self.width / 2.0,
-                    self.coordonne.y,
-                    self.coordonne.x + self.width / 2.0,
-                    self.coordonne.y - self.sensor_length_large,
-                    5.0,
-                    lerp_color(WHITE, sensor_color_large, 0.5),
-                );
-            }
-            Direction::Down => {
-                draw_line(
-                    self.coordonne.x + self.width / 2.0,
-                    self.coordonne.y + self.height,
-                    self.coordonne.x + self.width / 2.0,
-                    self.coordonne.y + self.height + self.sensor_length_large,
-                    5.0,
-                    lerp_color(WHITE, sensor_color_large, 0.5),
-                );
-            }
-            Direction::Left => {
-                draw_line(
-                    self.coordonne.x,
-                    self.coordonne.y + self.height / 2.0,
-                    self.coordonne.x - self.sensor_length_large,
-                    self.coordonne.y + self.height / 2.0,
-                    5.0,
-                    lerp_color(WHITE, sensor_color_large, 0.5),
-                );
-            }
-            Direction::Right => {
-                draw_line(
-                    self.coordonne.x + self.width,
-                    self.coordonne.y + self.height / 2.0,
-                    self.coordonne.x + self.width + self.sensor_length_large,
-                    self.coordonne.y + self.height / 2.0,
-                    5.0, // Thickness of 5.0 (adjust as needed)
-                    lerp_color(WHITE, sensor_color_large, 0.5),
-                );
-            }
-        }
+            Route::NE => self.coordonne.y > 515.0,
+            Route::SW => self.coordonne.y < 485.0,
+            Route::WN => self.coordonne.x > 515.0,
+            Route::ES => self.coordonne.x < 485.0,
+            _ => false,
+        };
+    }
+    pub fn draw(&self, car1: Texture2D, car2: Texture2D, car3: Texture2D) {
+        let draw_params = DrawTextureParams {
+            dest_size: Some(Vec2::new(CAR_WIDTH, CAR_HEIGHT)),
+            rotation: self.rotation.to_radians(),
+            ..Default::default()
+        };
 
-        // Draw the smaller sensor
-        match self.direction {
-            Direction::Up => {
-                draw_line(
-                    self.coordonne.x + self.width / 2.0,
-                    self.coordonne.y,
-                    self.coordonne.x + self.width / 2.0,
-                    self.coordonne.y - self.sensor_length_small,
-                    2.0, // Thickness of 2.0 (adjust as needed)
-                    lerp_color(WHITE, sensor_color_small, 0.5),
-                );
-            }
-            Direction::Down => {
-                draw_line(
-                    self.coordonne.x + self.width / 2.0,
-                    self.coordonne.y + self.height,
-                    self.coordonne.x + self.width / 2.0,
-                    self.coordonne.y + self.height + self.sensor_length_small,
-                    2.0, // Thickness of 2.0 (adjust as needed)
-                    lerp_color(WHITE, sensor_color_small, 0.5),
-                );
-            }
-            Direction::Left => {
-                draw_line(
-                    self.coordonne.x,
-                    self.coordonne.y + self.height / 2.0,
-                    self.coordonne.x - self.sensor_length_small,
-                    self.coordonne.y + self.height / 2.0,
-                    2.0, // Thickness of 2.0 (adjust as needed)
-                    lerp_color(WHITE, sensor_color_small, 0.5),
-                );
-            }
-            Direction::Right => {
-                draw_line(
-                    self.coordonne.x + self.width,
-                    self.coordonne.y + self.height / 2.0,
-                    self.coordonne.x + self.width + self.sensor_length_small,
-                    self.coordonne.y + self.height / 2.0,
-                    2.0, // Thickness of 2.0 (adjust as needed)
-                    lerp_color(WHITE, sensor_color_small, 0.5),
-                );
-            }
+        let car = match self.route {
+            Route::SE | Route::EN | Route::NW | Route::WS => &car1,
+            Route::NS | Route::SN | Route::WE | Route::EW => &car2,
+            _ => &car3,
+        };
+
+        draw_texture_ex(car, self.coordonne.x, self.coordonne.y, WHITE, draw_params);
+    }
+    fn get_coordinates(&self) -> Vec2 {
+        match *self {
+            Route::NS => vec2(410.0, 0.0),
+            Route::SN => vec2(550.0, 1000.0),
+            Route::WE => vec2(0.0, 560.0),
+            Route::EW => vec2(1000.0, 420.0),
+
+            Route::NW => vec2(360.0, 0.0),
+            Route::SE => vec2(600.0, 1000.0),
+            Route::WS => vec2(0.0, 605.0),
+            Route::EN => vec2(1000.0, 365.0),
+
+            Route::NE => vec2(460.0, 0.0),
+            Route::SW => vec2(500.0, 1000.0),
+            Route::WN => vec2(0.0, 515.0),
+            Route::ES => vec2(1000.0, 465.0),
         }
     }
+    fn get_speed(&self) -> (f32, f32) {
+        match *self {
+            Route::NS => (0.0, VITESSE_NORMAL),
+            Route::NW => (0.0, VITESSE_NORMAL),
+            Route::NE => (0.0, VITESSE_NORMAL),
+
+            Route::SN => (0.0, -VITESSE_NORMAL),
+            Route::SE => (0.0, -VITESSE_NORMAL),
+            Route::SW => (0.0, -VITESSE_NORMAL),
+
+            Route::WE => (VITESSE_NORMAL, 0.0),
+            Route::WS => (VITESSE_NORMAL, 0.0),
+            Route::WN => (VITESSE_NORMAL, 0.0),
+
+            Route::EW => (-VITESSE_NORMAL, 0.0),
+            Route::EN => (-VITESSE_NORMAL, 0.0),
+            Route::ES => (-VITESSE_NORMAL, 0.0),
+        }
+    }
+    fn get_direction(&self) -> Direction {
+        match *self {
+            Route::NS => Direction::Down,
+            Route::NW => Direction::Down,
+            Route::NE => Direction::Down,
+
+            Route::SN => Direction::Up,
+            Route::SE => Direction::Up,
+            Route::SW => Direction::Up,
+
+            Route::WE => Direction::Right,
+            Route::WS => Direction::Right,
+            Route::WN => Direction::Right,
+
+            Route::EW => Direction::Left,
+            Route::EN => Direction::Left,
+            Route::ES => Direction::Left,
+        }
+    }
+
+    fn not_allowed_to_go(&self) -> Vec<Route> {
+        match *self {
+            Route::NS => vec![Route::EW, Route::WE, Route::WN, Route::SW],
+            Route::SN => vec![Route::NE, Route::WE, Route::ES, Route::EW],
+            Route::WE => vec![Route::NS, Route::SW, Route::SN, Route::ES],
+            Route::EW => vec![Route::NS, Route::NE, Route::SN, Route::WN],
+
+            Route::NW => vec![],
+            Route::SE => vec![],
+            Route::WS => vec![],
+            Route::EN => vec![],
+
+            Route::NE => vec![Route::EW, Route::SN, Route::SW, Route::WN, Route::ES],
+            Route::SW => vec![Route::NS, Route::NE, Route::WE, Route::WN, Route::ES],
+            Route::WN => vec![Route::NS, Route::NE, Route::SW, Route::EW, Route::ES],
+            Route::ES => vec![Route::NE, Route::SN, Route::SW, Route::WE, Route::WN],
+        }
+    }
+
+    // Implement other methods (before_cross_road, in_stop_zone, after_cross_road, on_cross_road, speed_up, is_speed_up, is_slow_down, slow_down, on_turn_point, turn, drive_away)
 }
