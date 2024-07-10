@@ -1,38 +1,6 @@
 use macroquad::prelude::*;
 use smart_road::*;
 
-pub fn draw_title_text(text: &str) {
-    let dims = measure_text(text, Default::default(), 50u16, 1.0);
-    draw_text_ex(
-        text,
-        screen_width() / 2.0 - dims.width / 2.0,
-        screen_height() / 2.0 - dims.height / 2.0,
-        TextParams {
-            font: Default::default(),
-            font_size: 50u16,
-            color: WHITE,
-            ..Default::default()
-        },
-    );
-}
-
-pub struct Statistics {
-    passed_intersection: u32,
-}
-
-impl Statistics {
-    pub fn new() -> Self {
-        Self {
-            passed_intersection: 0,
-        }
-    }
-}
-
-pub enum GameState {
-    Menu,
-    Game,
-    Statistics,
-}
 
 fn window_conf() -> Conf {
     Conf {
@@ -90,18 +58,8 @@ async fn main() {
 
                 if is_key_pressed(KeyCode::R) {
                     let routes = vec![
-                        Route::EW,
-                        Route::WE,
-                        Route::SN,
-                        Route::NS,
-                        Route::EN,
-                        Route::WS,
-                        Route::NW,
-                        Route::SE,
-                        Route::NE,
-                        Route::SW,
-                        Route::WN,
-                        Route::ES,
+                        Route::EW, Route::WE, Route::SN, Route::NS, Route::EN, Route::WS,
+                        Route::NW, Route::SE, Route::NE, Route::SW, Route::WN, Route::ES,
                     ];
                     intersection.add_car(routes.clone(), cars.clone());
                 }
@@ -122,3 +80,37 @@ async fn main() {
         next_frame().await;
     }
 }
+
+pub fn draw_title_text(text: &str) {
+    let dims = measure_text(text, Default::default(), 50u16, 1.0);
+    draw_text_ex(
+        text,
+        screen_width() / 2.0 - dims.width / 2.0,
+        screen_height() / 2.0 - dims.height / 2.0,
+        TextParams {
+            font: Default::default(),
+            font_size: 50u16,
+            color: WHITE,
+            ..Default::default()
+        },
+    );
+}
+
+pub struct Statistics {
+    passed_intersection: u32,
+}
+
+impl Statistics {
+    pub fn new() -> Self {
+        Self {
+            passed_intersection: 0,
+        }
+    }
+}
+
+pub enum GameState {
+    Menu,
+    Game,
+    Statistics,
+}
+

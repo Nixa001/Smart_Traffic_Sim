@@ -1,21 +1,5 @@
 use macroquad::prelude::*;
-use crate::constants::*;
-use crate::route::Route;
-
-#[derive(Debug, PartialEq, Clone, Copy)]
-pub enum Direction {
-    Left,
-    Right,
-    Down,
-    Up,
-}
-
-#[derive(PartialEq)]
-pub enum Turning {
-    Left,
-    Right,
-    None,
-}
+use crate::{Route, Direction, constants::*};
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct Vehicule {
@@ -70,20 +54,6 @@ impl Vehicule {
         );
     }
 
-    fn on_turn_point(&self) -> bool {
-        return match self.route {
-            Route::NW => self.coordonne.y >= 340.0,
-            Route::SE => self.coordonne.y <= 625.0,
-            Route::WS => self.coordonne.x > 375.0,
-            Route::EN => self.coordonne.x < 625.0,
-
-            Route::NE => self.coordonne.y > 515.0,
-            Route::SW => self.coordonne.y < 485.0,
-            Route::WN => self.coordonne.x > 515.0,
-            Route::ES => self.coordonne.x < 485.0,
-            _ => false,
-        };
-    }
     pub fn draw(&self, car1: Texture2D, car2: Texture2D, car3: Texture2D) {
         let draw_params = DrawTextureParams {
             dest_size: Some(Vec2::new(CAR_WIDTH, CAR_HEIGHT)),
@@ -99,81 +69,152 @@ impl Vehicule {
 
         draw_texture_ex(car, self.coordonne.x, self.coordonne.y, WHITE, draw_params);
     }
-    fn get_coordinates(&self) -> Vec2 {
-        match *self {
-            Route::NS => vec2(410.0, 0.0),
-            Route::SN => vec2(550.0, 1000.0),
-            Route::WE => vec2(0.0, 560.0),
-            Route::EW => vec2(1000.0, 420.0),
 
-            Route::NW => vec2(360.0, 0.0),
-            Route::SE => vec2(600.0, 1000.0),
-            Route::WS => vec2(0.0, 605.0),
-            Route::EN => vec2(1000.0, 365.0),
-
-            Route::NE => vec2(460.0, 0.0),
-            Route::SW => vec2(500.0, 1000.0),
-            Route::WN => vec2(0.0, 515.0),
-            Route::ES => vec2(1000.0, 465.0),
-        }
-    }
-    fn get_speed(&self) -> (f32, f32) {
-        match *self {
-            Route::NS => (0.0, VITESSE_NORMAL),
-            Route::NW => (0.0, VITESSE_NORMAL),
-            Route::NE => (0.0, VITESSE_NORMAL),
-
-            Route::SN => (0.0, -VITESSE_NORMAL),
-            Route::SE => (0.0, -VITESSE_NORMAL),
-            Route::SW => (0.0, -VITESSE_NORMAL),
-
-            Route::WE => (VITESSE_NORMAL, 0.0),
-            Route::WS => (VITESSE_NORMAL, 0.0),
-            Route::WN => (VITESSE_NORMAL, 0.0),
-
-            Route::EW => (-VITESSE_NORMAL, 0.0),
-            Route::EN => (-VITESSE_NORMAL, 0.0),
-            Route::ES => (-VITESSE_NORMAL, 0.0),
-        }
-    }
-    fn get_direction(&self) -> Direction {
-        match *self {
-            Route::NS => Direction::Down,
-            Route::NW => Direction::Down,
-            Route::NE => Direction::Down,
-
-            Route::SN => Direction::Up,
-            Route::SE => Direction::Up,
-            Route::SW => Direction::Up,
-
-            Route::WE => Direction::Right,
-            Route::WS => Direction::Right,
-            Route::WN => Direction::Right,
-
-            Route::EW => Direction::Left,
-            Route::EN => Direction::Left,
-            Route::ES => Direction::Left,
+    fn before_cross_road(&self) -> bool {
+        match self.direction {
+            Direction::Right => self.coordonne.x < AVANT_INTERSECTION.x,
+            Direction::Left => self.coordonne.x > AVANT_INTERSECTION.y,
+            Direction::Down => self.coordonne.y < AVANT_INTERSECTION.x,
+            Direction::Up => self.coordonne.y > AVANT_INTERSECTION.y,
         }
     }
 
-    fn not_allowed_to_go(&self) -> Vec<Route> {
-        match *self {
-            Route::NS => vec![Route::EW, Route::WE, Route::WN, Route::SW],
-            Route::SN => vec![Route::NE, Route::WE, Route::ES, Route::EW],
-            Route::WE => vec![Route::NS, Route::SW, Route::SN, Route::ES],
-            Route::EW => vec![Route::NS, Route::NE, Route::SN, Route::WN],
+    fn in_stop_zone(&self) -> bool {
+        return match self.direction {
+            Direction::Right => self.coordonne.x > APRES_INTERSECTION.x - CAR_WIDTH,
+            Direction::Left => self.coordonne.x < APRES_INTERSECTION.y,
+            Direction::Down => self.coordonne.y > APRES_INTERSECTION.x - CAR_WIDTH,
+            Direction::Up => self.coordonne.y < APRES_INTERSECTION.y,
+        };
+    }
 
-            Route::NW => vec![],
-            Route::SE => vec![],
-            Route::WS => vec![],
-            Route::EN => vec![],
-
-            Route::NE => vec![Route::EW, Route::SN, Route::SW, Route::WN, Route::ES],
-            Route::SW => vec![Route::NS, Route::NE, Route::WE, Route::WN, Route::ES],
-            Route::WN => vec![Route::NS, Route::NE, Route::SW, Route::EW, Route::ES],
-            Route::ES => vec![Route::NE, Route::SN, Route::SW, Route::WE, Route::WN],
+    fn after_cross_road(&self) -> bool {
+        match self.direction {
+            Direction::Right => self.coordonne.x > APRES_INTERSECTION.y,
+            Direction::Left => self.coordonne.x < APRES_INTERSECTION.x,
+            Direction::Down => self.coordonne.y > APRES_INTERSECTION.y,
+            Direction::Up => self.coordonne.y < APRES_INTERSECTION.x,
         }
     }
 
-    // Implement other methods (before_cross_road, in_stop_zone, after_cross_road, on_cross_road, speed_up, is_speed_up, is_slow_down, slow_down, on_turn_point, turn, drive_away)
+    fn on_cross_road(&self) -> bool {
+        return !self.before_cross_road() && !self.after_cross_road();
+    }
+
+    fn speed_up(&mut self) {
+        self.vitesse = match self.direction {
+            Direction::Down => (0.0, VITESSE_RAPID),
+            Direction::Up => (0.0, -VITESSE_RAPID),
+            Direction::Right => (VITESSE_RAPID, 0.0),
+            Direction::Left => (-VITESSE_RAPID, 0.0),
+        }
+    }
+
+    fn is_speed_up(&self) -> bool {
+        return self.vitesse.0.abs() == VITESSE_RAPID || self.vitesse.1.abs() == VITESSE_RAPID;
+    }
+
+    fn is_slow_down(&self) -> bool {
+        return self.vitesse.0.abs() == VITESSE_MIN || self.vitesse.1.abs() == VITESSE_MIN;
+    }
+
+    fn slow_down(&mut self) {
+        self.vitesse = match self.direction {
+            Direction::Down => (0.0, VITESSE_MIN),
+            Direction::Up => (0.0, -VITESSE_MIN),
+            Direction::Right => (VITESSE_MIN, 0.0),
+            Direction::Left => (-VITESSE_MIN, 0.0),
+        }
+    }
+
+    fn on_turn_point(&self) -> bool {
+        return match self.route {
+            Route::NW => self.coordonne.y >= 340.0,
+            Route::SE => self.coordonne.y <= 625.0,
+            Route::WS => self.coordonne.x > 375.0,
+            Route::EN => self.coordonne.x < 625.0,
+            Route::NE => self.coordonne.y > 515.0,
+            Route::SW => self.coordonne.y < 485.0,
+            Route::WN => self.coordonne.x > 515.0,
+            Route::ES => self.coordonne.x < 485.0,
+            _ => false,
+        };
+    }
+
+    fn turn(&mut self) {
+        let vitesse = self.vitesse;
+        let r = self.rectangle;
+        self.rectangle.0 = r.1;
+        self.rectangle.1 = r.0;
+        self.turned = true;
+
+        match self.route {
+            Route::NE => {
+                self.vitesse.0 = vitesse.1;
+                self.vitesse.1 = vitesse.0;
+                self.direction = Direction::Right;
+                self.coordonne.y = 515.0;
+                self.rotation = 0.0;
+            }
+            Route::SW => {
+                self.vitesse.0 = vitesse.1;
+                self.vitesse.1 = vitesse.0;
+                self.direction = Direction::Left;
+                self.coordonne.y = 475.0;
+                self.rotation = 180.0;
+            }
+            Route::WN => {
+                self.vitesse.0 = -vitesse.1;
+                self.vitesse.1 = -vitesse.0;
+                self.direction = Direction::Up;
+                self.coordonne.x = 500.0;
+                self.rotation = 270.0;
+            }
+            Route::ES => {
+                self.vitesse.0 = -vitesse.1;
+                self.vitesse.1 = -vitesse.0;
+                self.direction = Direction::Down;
+                self.coordonne.x = 455.0;
+                self.rotation = 90.0;
+            }
+            Route::NW => {
+                self.vitesse.0 = -vitesse.1;
+                self.vitesse.1 = -vitesse.0;
+                self.direction = Direction::Left;
+                self.coordonne.y = 370.0;
+                self.rotation = 180.0;
+            }
+            Route::SE => {
+                self.vitesse.0 = -vitesse.1;
+                self.vitesse.1 = -vitesse.0;
+                self.coordonne.y = 610.0;
+                self.direction = Direction::Right;
+                self.rotation = 0.0;
+            }
+            Route::WS => {
+                self.direction = Direction::Down;
+                self.vitesse.0 = vitesse.1;
+                self.vitesse.1 = vitesse.0;
+                self.coordonne.x = 360.0;
+                self.rotation = 90.0;
+            }
+            Route::EN => {
+                self.direction = Direction::Up;
+                self.vitesse.0 = vitesse.1;
+                self.vitesse.1 = vitesse.0;
+                self.coordonne.x = 600.0;
+                self.rotation = 270.0;
+            }
+            _ => return,
+        }
+    }
+
+    pub fn drive_away(&self) -> bool {
+        return match self.direction {
+            Direction::Right => self.coordonne.x > 1000.0,
+            Direction::Left => self.coordonne.x < 0.0 - CAR_WIDTH,
+            Direction::Down => self.coordonne.y > 1000.0,
+            Direction::Up => self.coordonne.y < 0.0 - CAR_WIDTH,
+        };
+    }
 }

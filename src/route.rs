@@ -1,5 +1,5 @@
-use crate::constants::*;
 use macroquad::prelude::*;
+use crate::constants::*;
 
 #[derive(Debug, Clone, Copy, Eq, Hash, PartialEq)]
 pub enum Route {
@@ -64,74 +64,6 @@ impl Route {
             Route::SW => vec![Route::NS, Route::NE, Route::WE, Route::WN, Route::ES],
             Route::WN => vec![Route::NS, Route::NE, Route::SW, Route::EW, Route::ES],
             Route::ES => vec![Route::NE, Route::SN, Route::SW, Route::WE, Route::WN],
-        }
-    }
-
-    fn turn(&mut self) {
-        let vitesse = self.vitesse;
-        let r = self.rectangle;
-        self.rectangle.0 = r.1;
-        self.rectangle.1 = r.0;
-        self.turned = true;
-
-        match self.route {
-            Route::NE => {
-                self.vitesse.0 = vitesse.1;
-                self.vitesse.1 = vitesse.0;
-                self.direction = Direction::Right;
-                self.coordonne.y = 515.0;
-                self.rotation = 0.0;
-            }
-            Route::SW => {
-                self.vitesse.0 = vitesse.1;
-                self.vitesse.1 = vitesse.0;
-                self.direction = Direction::Left;
-                self.coordonne.y = 475.0;
-                self.rotation = 180.0;
-            }
-            Route::WN => {
-                self.vitesse.0 = -vitesse.1;
-                self.vitesse.1 = -vitesse.0;
-                self.direction = Direction::Up;
-                self.coordonne.x = 500.0;
-                self.rotation = 270.0;
-            }
-            Route::ES => {
-                self.vitesse.0 = -vitesse.1;
-                self.vitesse.1 = -vitesse.0;
-                self.direction = Direction::Down;
-                self.coordonne.x = 455.0;
-                self.rotation = 90.0;
-            }
-            Route::NW => {
-                self.vitesse.0 = -vitesse.1;
-                self.vitesse.1 = -vitesse.0;
-                self.direction = Direction::Left;
-                self.coordonne.y = 370.0;
-                self.rotation = 180.0;
-            }
-            Route::SE => {
-                self.vitesse.0 = -vitesse.1;
-                self.vitesse.1 = -vitesse.0;
-                self.coordonne.y = 610.0;
-                self.direction = Direction::Right;
-                self.rotation = 0.0;
-            }
-            Route::WS => {
-                self.direction = Direction::Down;
-                self.vitesse.0 = vitesse.1;
-                self.vitesse.1 = vitesse.0;
-                self.coordonne.x = 360.0;
-                self.rotation = 90.0;
-            }
-            Route::EN => {
-                self.direction = Direction::Up;
-                self.vitesse.0 = vitesse.1;
-                self.vitesse.1 = vitesse.0;
-                self.coordonne.x = 600.0;
-                self.rotation = 270.0;
-            }
-            _ => return,
         }
     }
 }

@@ -279,7 +279,7 @@ impl Route {
             Route::WE => vec2(0.0, 560.0),
             Route::EW => vec2(1000.0, 420.0),
 
-            Route::NW => vec2(360.0, 0.0),
+            Route::NW => vec2(355.0, 0.0),
             Route::SE => vec2(600.0, 1000.0),
             Route::WS => vec2(0.0, 605.0),
             Route::EN => vec2(1000.0, 365.0),
