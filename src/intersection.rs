@@ -133,7 +133,7 @@ impl Intersection {
                         Some(a) => {
                             let mut res = true;
                             a.iter().for_each(|f| {
-                                res = res && !cars.get(f).unwrap().is_speed_up();
+                                res = res && !cars.get(f).unwrap().is_vitesse_max();
                             });
                             res
                         }
@@ -144,7 +144,7 @@ impl Intersection {
 
                 if !cars_on_cross_road.is_none() {
                     let mut all_cars = cars_on_cross_road.unwrap().clone();
-                    if !car.before_cross_road() && !car.is_speed_up() {
+                    if !car.avant_intersect() && !car.is_vitesse_max() {
                         if can_go {
                             car.speed_up();
                             if !self.queue.is_empty() && self.queue[0] == car.id {
@@ -157,7 +157,7 @@ impl Intersection {
                             }
                         }
                         all_cars.insert(car.id);
-                    } else if car.after_cross_road() {
+                    } else if car.after_intersect() {
                         all_cars.remove(&car.id);
                     }
                     if all_cars.is_empty() {
@@ -180,9 +180,9 @@ impl Intersection {
                     }
                     self.occupied_tracks.insert(*route, cars);
                 }
-                if car.before_cross_road() && ind >= 1 {
+                if car.avant_intersect() && ind >= 1 {
                     if !cars.get(&cars_ids[ind - 1]).is_none()
-                        && cars.get(&cars_ids[ind - 1]).unwrap().is_slow_down()
+                        && cars.get(&cars_ids[ind - 1]).unwrap().is_vitesse_min()
                     {
                         car.slow_down();
                     } else {
@@ -191,7 +191,7 @@ impl Intersection {
                 }
                 let mut car_clone = car.clone();
                 car_clone.move_car();
-                if (car_clone.is_speed_up() || !car_clone.in_stop_zone())
+                if (car_clone.is_vitesse_max() || !car_clone.in_stop_zone())
                     && !cars.values().any(|c| {
                         c.id != car_clone.id
                             && intersect(
@@ -209,7 +209,7 @@ impl Intersection {
                     })
                 {
                     car.move_car();
-                    if car.drive_away() {
+                    if car.is_out_of_road() {
                         self.cars.remove(car_id);
                         self.number_of_passed_vehicles += 1;
                     }

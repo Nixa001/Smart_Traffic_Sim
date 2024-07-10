@@ -79,7 +79,7 @@ impl Vehicule {
         draw_texture_ex(car, self.coordonne.x, self.coordonne.y, WHITE, draw_params);
     }
 
-    pub fn before_cross_road(&self) -> bool {
+    pub fn avant_intersect(&self) -> bool {
         match self.direction {
             Direction::Right => self.coordonne.x < AVANT_INTERSECTION.x,
             Direction::Left => self.coordonne.x > AVANT_INTERSECTION.y,
@@ -97,7 +97,7 @@ impl Vehicule {
         };
     }
 
-    pub fn after_cross_road(&self) -> bool {
+    pub fn after_intersect(&self) -> bool {
         match self.direction {
             Direction::Right => self.coordonne.x > APRES_INTERSECTION.y,
             Direction::Left => self.coordonne.x < APRES_INTERSECTION.x,
@@ -107,7 +107,7 @@ impl Vehicule {
     }
 
     pub fn on_cross_road(&self) -> bool {
-        return !self.before_cross_road() && !self.after_cross_road();
+        return !self.avant_intersect() && !self.after_intersect();
     }
 
     pub fn speed_up(&mut self) {
@@ -119,11 +119,11 @@ impl Vehicule {
         }
     }
 
-    pub fn is_speed_up(&self) -> bool {
+    pub fn is_vitesse_max(&self) -> bool {
         return self.vitesse.0.abs() == VITESSE_RAPID || self.vitesse.1.abs() == VITESSE_RAPID;
     }
 
-    pub fn is_slow_down(&self) -> bool {
+    pub fn is_vitesse_min(&self) -> bool {
         return self.vitesse.0.abs() == VITESSE_MIN || self.vitesse.1.abs() == VITESSE_MIN;
     }
 
@@ -219,7 +219,7 @@ impl Vehicule {
         }
     }
 
-    pub fn drive_away(&self) -> bool {
+    pub fn is_out_of_road(&self) -> bool {
         return match self.direction {
             Direction::Right => self.coordonne.x > 1000.0,
             Direction::Left => self.coordonne.x < 0.0 - CAR_WIDTH,

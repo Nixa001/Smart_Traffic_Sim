@@ -1,11 +1,12 @@
-use macroquad::prelude::*;
+use crate::constants::*;
 use crate::intersection::*;
 use crate::route::*;
+use macroquad::prelude::*;
 
-mod vehicule;
-mod intersection;
 mod constants;
+mod intersection;
 mod route;
+mod vehicule;
 
 fn window_conf() -> Conf {
     Conf {
@@ -15,6 +16,26 @@ fn window_conf() -> Conf {
         window_resizable: false,
         ..Default::default()
     }
+}
+
+fn draw_intersection_rectangle() {
+    // Définir les coordonnées du rectangle de l'intersection
+    let left = AVANT_INTERSECTION.x;
+    let right = APRES_INTERSECTION.y;
+    let top = APRES_INTERSECTION.y;
+    let bottom = AVANT_INTERSECTION.x;
+
+    // Dessiner les lignes du rectangle
+    draw_line(left, top, right, top, 2.0, RED); // Ligne supérieure
+    draw_line(left, bottom, right, bottom, 2.0, RED); // Ligne inférieure
+    draw_line(left, top, left, bottom, 2.0, RED); // Ligne gauche
+    draw_line(right, top, right, bottom, 2.0, RED); // Ligne droite
+
+    // Dessiner les lignes d'arrêt
+    let stop_right = APRES_INTERSECTION.x;
+    let stop_bottom = APRES_INTERSECTION.x;
+    draw_line(stop_right, top, stop_right, bottom, 2.0, YELLOW); // Ligne d'arrêt droite
+    draw_line(left, stop_bottom, right, stop_bottom, 2.0, YELLOW); // Ligne d'arrêt inférieure
 }
 
 #[macroquad::main(window_conf)]
@@ -31,6 +52,7 @@ async fn main() {
     loop {
         clear_background(WHITE);
         draw_texture(&img, 0.0, 0.0, WHITE);
+        draw_intersection_rectangle();
 
         match game_state {
             GameState::Menu => {
@@ -63,8 +85,18 @@ async fn main() {
 
                 if is_key_pressed(KeyCode::R) {
                     let routes = vec![
-                        Route::EW, Route::WE, Route::SN, Route::NS, Route::EN, Route::WS,
-                        Route::NW, Route::SE, Route::NE, Route::SW, Route::WN, Route::ES,
+                        Route::EW,
+                        Route::WE,
+                        Route::SN,
+                        Route::NS,
+                        Route::EN,
+                        Route::WS,
+                        Route::NW,
+                        Route::SE,
+                        Route::NE,
+                        Route::SW,
+                        Route::WN,
+                        Route::ES,
                     ];
                     intersection.add_car(routes.clone(), cars.clone());
                 }
