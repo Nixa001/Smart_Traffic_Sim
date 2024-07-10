@@ -9,18 +9,3 @@ pub const VITESSE_RAPID: f32 = 1.5;
 
 pub const AVANT_INTERSECTION: Vec2 = vec2(300.0, 700.0);
 pub const APRES_INTERSECTION: Vec2 = vec2(400.0, 600.0);
-
-#[derive(Debug, PartialEq, Clone, Copy)]
-pub enum Direction {
-    Left,
-    Right,
-    Down,
-    Up,
-}
-
-#[derive(PartialEq)]
-pub enum Turning {
-    Left,
-    Right,
-    None,
-}

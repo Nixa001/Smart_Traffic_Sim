@@ -1,6 +1,11 @@
 use macroquad::prelude::*;
-use smart_road::*;
+use crate::intersection::*;
+use crate::route::*;
 
+mod vehicule;
+mod intersection;
+mod constants;
+mod route;
 
 fn window_conf() -> Conf {
     Conf {
@@ -113,4 +118,3 @@ pub enum GameState {
     Game,
     Statistics,
 }
-

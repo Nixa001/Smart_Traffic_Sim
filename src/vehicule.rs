@@ -1,5 +1,14 @@
+use crate::constants::*;
+use crate::route::*;
 use macroquad::prelude::*;
-use crate::{Route, Direction, constants::*};
+
+#[derive(Debug, PartialEq, Clone, Copy)]
+pub enum Direction {
+    Left,
+    Right,
+    Down,
+    Up,
+}
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct Vehicule {
@@ -44,7 +53,7 @@ impl Vehicule {
         }
     }
 
-    pub fn drive(&mut self) {
+    pub fn move_car(&mut self) {
         if self.on_turn_point() && !self.turned {
             self.turn();
         }
@@ -70,7 +79,7 @@ impl Vehicule {
         draw_texture_ex(car, self.coordonne.x, self.coordonne.y, WHITE, draw_params);
     }
 
-    fn before_cross_road(&self) -> bool {
+    pub fn before_cross_road(&self) -> bool {
         match self.direction {
             Direction::Right => self.coordonne.x < AVANT_INTERSECTION.x,
             Direction::Left => self.coordonne.x > AVANT_INTERSECTION.y,
@@ -79,7 +88,7 @@ impl Vehicule {
         }
     }
 
-    fn in_stop_zone(&self) -> bool {
+    pub fn in_stop_zone(&self) -> bool {
         return match self.direction {
             Direction::Right => self.coordonne.x > APRES_INTERSECTION.x - CAR_WIDTH,
             Direction::Left => self.coordonne.x < APRES_INTERSECTION.y,
@@ -88,7 +97,7 @@ impl Vehicule {
         };
     }
 
-    fn after_cross_road(&self) -> bool {
+    pub fn after_cross_road(&self) -> bool {
         match self.direction {
             Direction::Right => self.coordonne.x > APRES_INTERSECTION.y,
             Direction::Left => self.coordonne.x < APRES_INTERSECTION.x,
@@ -97,11 +106,11 @@ impl Vehicule {
         }
     }
 
-    fn on_cross_road(&self) -> bool {
+    pub fn on_cross_road(&self) -> bool {
         return !self.before_cross_road() && !self.after_cross_road();
     }
 
-    fn speed_up(&mut self) {
+    pub fn speed_up(&mut self) {
         self.vitesse = match self.direction {
             Direction::Down => (0.0, VITESSE_RAPID),
             Direction::Up => (0.0, -VITESSE_RAPID),
@@ -110,15 +119,15 @@ impl Vehicule {
         }
     }
 
-    fn is_speed_up(&self) -> bool {
+    pub fn is_speed_up(&self) -> bool {
         return self.vitesse.0.abs() == VITESSE_RAPID || self.vitesse.1.abs() == VITESSE_RAPID;
     }
 
-    fn is_slow_down(&self) -> bool {
+    pub fn is_slow_down(&self) -> bool {
         return self.vitesse.0.abs() == VITESSE_MIN || self.vitesse.1.abs() == VITESSE_MIN;
     }
 
-    fn slow_down(&mut self) {
+    pub fn slow_down(&mut self) {
         self.vitesse = match self.direction {
             Direction::Down => (0.0, VITESSE_MIN),
             Direction::Up => (0.0, -VITESSE_MIN),
@@ -133,6 +142,7 @@ impl Vehicule {
             Route::SE => self.coordonne.y <= 625.0,
             Route::WS => self.coordonne.x > 375.0,
             Route::EN => self.coordonne.x < 625.0,
+
             Route::NE => self.coordonne.y > 515.0,
             Route::SW => self.coordonne.y < 485.0,
             Route::WN => self.coordonne.x > 515.0,
