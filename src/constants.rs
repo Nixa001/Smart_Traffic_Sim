@@ -9,3 +9,4 @@ pub const VITESSE_RAPID: f32 = 2.5;
 
 pub const AVANT_INTERSECTION: Vec2 = vec2(250.0, 700.0);
 pub const APRES_INTERSECTION: Vec2 = vec2(400.0, 600.0);
+pub const SECURITY_DISTANCE: f32 = 70.0;

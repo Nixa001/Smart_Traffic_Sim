@@ -6,7 +6,6 @@ use crate::vehicule::*;
 use macroquad::prelude::*;
 use std::collections::{HashMap, HashSet, VecDeque};
 
-const SECURITY_DISTANCE: f32 = 160.0;
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct Intersection {
@@ -235,22 +234,24 @@ impl Intersection {
             }
         }
         self.check_close_calls();
+        
     }
-
+    
     fn check_security_distance(&self, car: &Vehicule, prev_car: &Vehicule) -> bool {
         let distance = match car.direction {
             Direction::Up | Direction::Down => (car.coordonne.y - prev_car.coordonne.y).abs(),
             Direction::Left | Direction::Right => (car.coordonne.x - prev_car.coordonne.x).abs(),
         };
-
+        
         distance >= SECURITY_DISTANCE
     }
-
+    
     fn check_close_calls(&mut self) {
         for car in self.cars.values() {
             for other_car in self.cars.values() {
                 if car.id != other_car.id && !self.check_security_distance(car, other_car) {
-                    self.close_calls += 0;
+                    // self.close_calls += 1;
+                    self.close_calls = 0;
                     break;
                 }
             }
@@ -267,7 +268,6 @@ impl Intersection {
                 if self.cars.contains_key(&car_id) {
                     left_cars.push(car_id);
                 } else {
-                    // Car has been removed, update time stats
                     if let Some(start_time) = self.vehicle_start_times.get(&car_id) {
                         let duration = now.duration_since(*start_time);
                         self.max_time = self.max_time.max(duration);
@@ -283,7 +283,6 @@ impl Intersection {
             }
         }
 
-        // Remove processed vehicle start times
         for car_id in to_remove {
             self.vehicle_start_times.remove(&car_id);
         }
