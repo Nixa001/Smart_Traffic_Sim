@@ -45,3 +45,15 @@ git clone https://github.com/nixa001/Smart_Traffic_Sim.git
 cd Smart_Traffic_Sim
 cargo run
 ```
+### Running the Simulation
+To run the simulation, use the following commands:
+
+#### Generate Vehicles:
+
+- ↑ Arrow Up: Generate vehicles from south to north.
+- ↓ Arrow Down: Generate vehicles from north to south.
+- → Arrow Right: Generate vehicles from west to east.
+- ← Arrow Left: Generate vehicles from east to west.
+- R: Continually generate random vehicles (using the game loop).
+- Esc: Finish the simulation and generate a window with all statistics.
+- Exit Simulation:
