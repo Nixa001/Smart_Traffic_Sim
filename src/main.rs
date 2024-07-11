@@ -1,7 +1,6 @@
-use crate::constants::*;
 use crate::intersection::*;
 use crate::route::*;
-use std::time::Instant;
+use std::time::{Duration, Instant};
 
 use macroquad::prelude::*;
 
@@ -53,8 +52,8 @@ pub struct Statistics {
     passed_intersection: u32,
     max_velocity: f32,
     min_velocity: f32,
-    max_time: f32,
-    min_time: f32,
+    max_time: Duration,
+    min_time: Duration,
     close_calls: u32,
 }
 
@@ -64,8 +63,8 @@ impl Statistics {
             passed_intersection: 0,
             max_velocity: 0.0,
             min_velocity: f32::MAX,
-            max_time: 0.0,
-            min_time: f32::MAX,
+            max_time: Duration::from_secs(0),
+            min_time: Duration::from_secs(u64::MAX),
             close_calls: 0,
         }
     }
@@ -75,6 +74,8 @@ impl Statistics {
         self.max_velocity = intersection.max_velocity;
         self.min_velocity = intersection.min_velocity;
         self.close_calls = intersection.close_calls;
+        self.max_time = intersection.max_time;
+        self.min_time = intersection.min_time;
     }
 }
 
@@ -106,7 +107,8 @@ async fn main() {
     let mut intersection = Intersection::new();
 
     let cars: Vec<Texture2D> = vec![car_1.clone(), car_2.clone(), car_3.clone()];
-    let start_time = Instant::now();
+    let throttle_duration = Duration::from_millis(200); // 200 milliseconds throttle
+    let mut last_key_press = Instant::now() - throttle_duration; // Ensure first key press isn't throttled
 
     loop {
         match game_state {
@@ -118,75 +120,83 @@ async fn main() {
                 intersection.remove_cars();
                 intersection.draw_cars(car_1.clone(), car_2.clone(), car_3.clone());
 
-                if is_key_pressed(KeyCode::Left) {
-                    let routes = vec![Route::EW, Route::EN, Route::ES];
-                    intersection.add_car(routes.clone(), cars.clone());
-                }
+                if last_key_press.elapsed() >= throttle_duration {
+                    if is_key_pressed(KeyCode::Left) {
+                        let routes = vec![Route::EW, Route::EN, Route::ES];
+                        intersection.add_car(routes.clone(), cars.clone());
+                        last_key_press = Instant::now();
+                    }
 
-                if is_key_pressed(KeyCode::Right) {
-                    let routes = vec![Route::WE, Route::WS, Route::WN];
-                    intersection.add_car(routes.clone(), cars.clone());
-                }
+                    if is_key_pressed(KeyCode::Right) {
+                        let routes = vec![Route::WE, Route::WS, Route::WN];
+                        intersection.add_car(routes.clone(), cars.clone());
+                        last_key_press = Instant::now();
+                    }
 
-                if is_key_pressed(KeyCode::Up) {
-                    let routes = vec![Route::SN, Route::SE, Route::SW];
-                    intersection.add_car(routes.clone(), cars.clone());
-                }
+                    if is_key_pressed(KeyCode::Up) {
+                        let routes = vec![Route::SN, Route::SE, Route::SW];
+                        intersection.add_car(routes.clone(), cars.clone());
+                        last_key_press = Instant::now();
+                    }
 
-                if is_key_pressed(KeyCode::Down) {
-                    let routes = vec![Route::NS, Route::NW, Route::NE];
-                    intersection.add_car(routes.clone(), cars.clone());
-                }
+                    if is_key_pressed(KeyCode::Down) {
+                        let routes = vec![Route::NS, Route::NW, Route::NE];
+                        intersection.add_car(routes.clone(), cars.clone());
+                        last_key_press = Instant::now();
+                    }
 
-                if is_key_pressed(KeyCode::R) {
-                    let routes = vec![
-                        Route::EW,
-                        Route::WE,
-                        Route::SN,
-                        Route::NS,
-                        Route::EN,
-                        Route::WS,
-                        Route::NW,
-                        Route::SE,
-                        Route::NE,
-                        Route::SW,
-                        Route::WN,
-                        Route::ES,
-                    ];
-                    intersection.add_car(routes.clone(), cars.clone());
-                }
+                    if is_key_pressed(KeyCode::R) {
+                        let routes = vec![
+                            Route::EW,
+                            Route::WE,
+                            Route::SN,
+                            Route::NS,
+                            Route::EN,
+                            Route::WS,
+                            Route::NW,
+                            Route::SE,
+                            Route::NE,
+                            Route::SW,
+                            Route::WN,
+                            Route::ES,
+                        ];
+                        intersection.add_car(routes.clone(), cars.clone());
+                        last_key_press = Instant::now();
+                    }
 
-                if is_key_pressed(KeyCode::Escape) {
-                    statistics.update(&intersection);
-                    let elapsed = start_time.elapsed().as_secs_f32();
-                    statistics.max_time = statistics.max_time.max(elapsed);
-                    statistics.min_time = statistics.min_time.min(elapsed);
-                    game_state = GameState::Statistics;
-                    window.set_size(500, 400);
-                    window.set_title("Statistiques de simulation");
+                    if is_key_pressed(KeyCode::Escape) {
+                        statistics.update(&intersection);
+                        game_state = GameState::Statistics;
+                        window.set_size(500, 400);
+                        window.set_title("Simulation Statistics");
+                        last_key_press = Instant::now();
+                    }
                 }
             }
             GameState::Statistics => {
                 clear_background(WHITE);
                 draw_stats_text(
-                    &format!("Véhicules passés: {}", statistics.passed_intersection),
+                    &format!("Vehicles passed: {}", statistics.passed_intersection),
                     50.0,
                 );
                 draw_stats_text(
-                    &format!("Vitesse max: {:.2} px/s", statistics.max_velocity),
+                    &format!("Max velocity: {:.1} ", statistics.max_velocity),
                     100.0,
                 );
                 draw_stats_text(
-                    &format!("Vitesse min: {:.2} px/s", statistics.min_velocity),
+                    &format!("Min velocity: {:.1} ", statistics.min_velocity),
                     150.0,
                 );
-                draw_stats_text(&format!("Temps max: {:.2} s", statistics.max_time), 200.0);
-                draw_stats_text(&format!("Temps min: {:.2} s", statistics.min_time), 250.0);
                 draw_stats_text(
-                    &format!("Appels proches: {}", statistics.close_calls),
-                    300.0,
+                    &format!("Max time: {:.2} s", statistics.max_time.as_secs_f32()),
+                    200.0,
                 );
-                draw_stats_text("Appuyez sur ESPACE pour quitter", 350.0);
+                draw_stats_text(
+                    &format!("Min time: {:.2} s", statistics.min_time.as_secs_f32()),
+                    250.0,
+                );
+                draw_stats_text(&format!("Close calls: {}", statistics.close_calls), 300.0);
+                draw_stats_text("Press SPACE to quit", 350.0);
 
                 if is_key_pressed(KeyCode::Space) {
                     std::process::exit(0);
