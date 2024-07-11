@@ -560,11 +560,12 @@ impl Intersection {
                     }
                 }
             }
-            for car in self.cars.values() {
-                let speed = (car.vitesse.0.powi(2) + car.vitesse.1.powi(2)).sqrt();
-                self.max_velocity = self.max_velocity.max(speed);
-                self.min_velocity = self.min_velocity.min(speed);
-            }
+                    for car in self.cars.values() {
+            let speed = (car.vitesse.0.powi(2) + car.vitesse.1.powi(2)).sqrt();
+            self.max_velocity = self.max_velocity.max(speed);
+            self.min_velocity = self.min_velocity.min(speed);
+        }
+
         }
     }
 
