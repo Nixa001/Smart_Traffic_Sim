@@ -1,10 +1,12 @@
 use crate::constants::*;
 use crate::route::*;
+use std::time::{Duration, Instant};
+
 use crate::vehicule::*;
 use macroquad::prelude::*;
 use std::collections::{HashMap, HashSet, VecDeque};
 
-const SECURITY_DISTANCE:f32 = 100.0;
+const SECURITY_DISTANCE: f32 = 160.0;
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct Intersection {
@@ -19,6 +21,9 @@ pub struct Intersection {
     pub min_velocity: f32,
     pub collapse: u32,
     pub close_calls: u32,
+    pub max_time: Duration,
+    pub min_time: Duration,
+    vehicle_start_times: HashMap<u32, Instant>,
 }
 
 impl Intersection {
@@ -34,6 +39,10 @@ impl Intersection {
             min_velocity: 10.0,
             collapse: 0,
             close_calls: 0,
+
+            max_time: Duration::from_secs(0),
+            min_time: Duration::from_secs(u64::MAX),
+            vehicle_start_times: HashMap::new(),
         }
     }
 
@@ -44,6 +53,7 @@ impl Intersection {
         }
 
         self.car_id += 1;
+        self.vehicle_start_times.insert(self.car_id, Instant::now());
 
         let mut rectangle: (f32, f32) = (CAR_WIDTH, CAR_HEIGHT);
         let direction = route.get_direction();
@@ -73,7 +83,6 @@ impl Intersection {
             None => Vec::new(),
         };
         cars.push(car.id);
-        self.tracks.get_mut(&route);
         self.tracks.insert(route, cars.clone());
         self.cars.insert(car.id, car);
     }
@@ -86,22 +95,22 @@ impl Intersection {
                 let last_car_id = cars.as_slice().last().unwrap();
                 let last_car_position = self.cars.get(last_car_id).unwrap().coordonne;
                 if (route == Route::NS || route == Route::NW || route == Route::NE)
-                    && last_car_position.y <= start_coordinates.y + CAR_WIDTH * 2.0
+                    && last_car_position.y <= start_coordinates.y + SECURITY_DISTANCE
                 {
                     return false;
                 }
                 if (route == Route::SN || route == Route::SE || route == Route::SW)
-                    && last_car_position.y + CAR_WIDTH * 2.0 >= start_coordinates.y
+                    && last_car_position.y + SECURITY_DISTANCE >= start_coordinates.y
                 {
                     return false;
                 }
                 if (route == Route::WE || route == Route::WS || route == Route::WN)
-                    && last_car_position.x <= start_coordinates.x + CAR_WIDTH * 2.0
+                    && last_car_position.x <= start_coordinates.x + SECURITY_DISTANCE
                 {
                     return false;
                 }
                 if (route == Route::EW || route == Route::EN || route == Route::ES)
-                    && last_car_position.x + CAR_WIDTH * 2.0 >= start_coordinates.x
+                    && last_car_position.x + SECURITY_DISTANCE >= start_coordinates.x
                 {
                     return false;
                 }
@@ -123,10 +132,9 @@ impl Intersection {
     pub fn drive_cars(&mut self) {
         for (route, cars_ids) in self.tracks.iter() {
             for (ind, car_id) in cars_ids.iter().enumerate() {
-                
                 let cars = self.cars.clone();
                 let cars_on_cross_road = self.occupied_tracks.get(route);
-              
+
                 let car: &mut Vehicule = self.cars.get_mut(car_id).unwrap();
 
                 let mut can_go = route.not_allowed_to_go().len() == 0
@@ -226,6 +234,7 @@ impl Intersection {
                 self.min_velocity = self.min_velocity.min(speed);
             }
         }
+        self.check_close_calls();
     }
 
     fn check_security_distance(&self, car: &Vehicule, prev_car: &Vehicule) -> bool {
@@ -237,34 +246,47 @@ impl Intersection {
         distance >= SECURITY_DISTANCE
     }
 
-    fn check_close_calls(&self, car: &Vehicule) -> bool {
-        for other_car in self.cars.values() {
-            if car.id != other_car.id {
-                let distance = ((car.coordonne.x - other_car.coordonne.x).powi(2)
-                    + (car.coordonne.y - other_car.coordonne.y).powi(2))
-                .sqrt();
-
-                if distance < SECURITY_DISTANCE {
-                    return true;
+    fn check_close_calls(&mut self) {
+        for car in self.cars.values() {
+            for other_car in self.cars.values() {
+                if car.id != other_car.id && !self.check_security_distance(car, other_car) {
+                    self.close_calls += 0;
+                    break;
                 }
             }
         }
-        false
     }
+
     pub fn remove_cars(&mut self) {
-        let mut map: HashMap<Route, Vec<u32>> = HashMap::new();
-        for (route, cars) in self.tracks.iter() {
+        let now = Instant::now();
+        let mut to_remove = Vec::new();
+
+        for (route, cars) in self.tracks.clone().iter() {
             let mut left_cars: Vec<u32> = vec![];
-            cars.iter().for_each(|c| {
-                if self.cars.contains_key(c) {
-                    left_cars.push(*c);
+            for &car_id in cars {
+                if self.cars.contains_key(&car_id) {
+                    left_cars.push(car_id);
+                } else {
+                    // Car has been removed, update time stats
+                    if let Some(start_time) = self.vehicle_start_times.get(&car_id) {
+                        let duration = now.duration_since(*start_time);
+                        self.max_time = self.max_time.max(duration);
+                        self.min_time = self.min_time.min(duration);
+                    }
+                    to_remove.push(car_id);
                 }
-            });
-            if left_cars.len() > 0 {
-                map.insert(*route, left_cars);
+            }
+            if !left_cars.is_empty() {
+                self.tracks.insert(*route, left_cars);
+            } else {
+                self.tracks.remove(route);
             }
         }
-        self.tracks = map;
+
+        // Remove processed vehicle start times
+        for car_id in to_remove {
+            self.vehicle_start_times.remove(&car_id);
+        }
     }
 }
 
