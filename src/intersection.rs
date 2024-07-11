@@ -4,6 +4,8 @@ use crate::vehicule::*;
 use macroquad::prelude::*;
 use std::collections::{HashMap, HashSet, VecDeque};
 
+const SECURITY_DISTANCE:f32 = 100.0;
+
 #[derive(Debug, PartialEq, Clone)]
 pub struct Intersection {
     tracks: HashMap<Route, Vec<u32>>,
@@ -29,7 +31,7 @@ impl Intersection {
             queue: VecDeque::new(),
             number_of_passed_vehicles: 0,
             max_velocity: 0.0,
-            min_velocity: 0.0,
+            min_velocity: 10.0,
             collapse: 0,
             close_calls: 0,
         }
@@ -121,9 +123,12 @@ impl Intersection {
     pub fn drive_cars(&mut self) {
         for (route, cars_ids) in self.tracks.iter() {
             for (ind, car_id) in cars_ids.iter().enumerate() {
+                
                 let cars = self.cars.clone();
                 let cars_on_cross_road = self.occupied_tracks.get(route);
+              
                 let car: &mut Vehicule = self.cars.get_mut(car_id).unwrap();
+
                 let mut can_go = route.not_allowed_to_go().len() == 0
                     || self.queue.is_empty()
                     || self.queue[0] == car.id;
@@ -215,9 +220,37 @@ impl Intersection {
                     }
                 }
             }
+            for car in self.cars.values() {
+                let speed = (car.vitesse.0.powi(2) + car.vitesse.1.powi(2)).sqrt();
+                self.max_velocity = self.max_velocity.max(speed);
+                self.min_velocity = self.min_velocity.min(speed);
+            }
         }
     }
 
+    fn check_security_distance(&self, car: &Vehicule, prev_car: &Vehicule) -> bool {
+        let distance = match car.direction {
+            Direction::Up | Direction::Down => (car.coordonne.y - prev_car.coordonne.y).abs(),
+            Direction::Left | Direction::Right => (car.coordonne.x - prev_car.coordonne.x).abs(),
+        };
+
+        distance >= SECURITY_DISTANCE
+    }
+
+    fn check_close_calls(&self, car: &Vehicule) -> bool {
+        for other_car in self.cars.values() {
+            if car.id != other_car.id {
+                let distance = ((car.coordonne.x - other_car.coordonne.x).powi(2)
+                    + (car.coordonne.y - other_car.coordonne.y).powi(2))
+                .sqrt();
+
+                if distance < SECURITY_DISTANCE {
+                    return true;
+                }
+            }
+        }
+        false
+    }
     pub fn remove_cars(&mut self) {
         let mut map: HashMap<Route, Vec<u32>> = HashMap::new();
         for (route, cars) in self.tracks.iter() {
